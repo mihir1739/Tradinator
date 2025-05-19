@@ -15,11 +15,12 @@ The Trading Simulator is a high-performance application designed to leverage rea
 tradinator
 ├── src
 │   ├── main.cpp
-│   ├── application
+         ├── models
+         └── web
 │   ├── core
 │   └── ui
 ├── include
-│   └── tradinator
+├── benchmarking
 ├── test
 ├── resources
 ├── conanfile.txt

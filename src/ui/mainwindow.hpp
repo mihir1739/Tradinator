@@ -12,7 +12,8 @@
 #include <QDoubleSpinBox>
 #include <QPushButton>
 #include <QTextEdit>
-#include <QThread>
+#include <QTimer>
+#include <memory>
 #include "core/web/websocket.hpp"
 #include "core/models/orderbook.hpp"
 #include "utils/logger.hpp"
@@ -32,6 +33,7 @@ signals:
 private slots:
     void onStartStopButtonClicked();
     void updateOutputLabels();
+    void processIoContext();
 
 private:
     void setupUI();
@@ -58,11 +60,11 @@ private:
     QLabel *latencyLabel_;
 
     // Backend Components
-    Logger *logger_;
-    WebSocketClient *wsClient_;
-    OrderBook *orderBook_;
-    QThread *wsThread_;
-    Benchmarker *benchmarker_;
+    std::unique_ptr<Logger> logger_;
+    std::unique_ptr<Benchmarker> benchmarker_;
+    std::unique_ptr<WebSocketClient> wsClient_;
+    std::unique_ptr<OrderBook> orderBook_;
+    std::unique_ptr<QTimer> ioTimer_;
     std::atomic<bool> running_;
 };
 

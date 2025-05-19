@@ -20,7 +20,7 @@ namespace net = boost::asio;
 namespace ssl = boost::asio::ssl;
 using tcp = boost::asio::ip::tcp;
 
-class Benchmarker; // Forward declaration
+class Benchmarker;
 
 class WebSocketClient : public QObject {
     Q_OBJECT
@@ -29,13 +29,16 @@ public:
     WebSocketClient(const std::string& uri, QObject *parent = nullptr);
     ~WebSocketClient();
 
+    void pollIoContext();    // New: Public method to poll io_context_
+    void restartIoContext(); // New: Public method to restart io_context_
+
 public slots:
     void start();
     void stop();
     void receive();
 
 signals:
-    void messageReceived(const std::string& message, Benchmarker* benchmarker);
+    void messageReceived(std::string_view message, Benchmarker* benchmarker);
     void errorOccurred(const std::string& error);
     void connected();
     void disconnected();
@@ -43,6 +46,7 @@ signals:
 private:
     bool connect();
     void disconnect();
+    void asyncReceive();
 
     std::string host_;
     std::string port_;
@@ -52,8 +56,8 @@ private:
     net::io_context io_context_;
     tcp::resolver resolver_;
     ssl::context ssl_ctx_{ssl::context::tlsv12_client};
-    websocket::stream<beast::ssl_stream<beast::tcp_stream>> wss_{io_context_, ssl_ctx_};
-    websocket::stream<beast::tcp_stream> ws_{io_context_};
+    std::unique_ptr<websocket::stream<beast::ssl_stream<beast::tcp_stream>>> wss_;
+    std::unique_ptr<websocket::stream<beast::tcp_stream>> ws_;
     beast::flat_buffer buffer_;
 };
 

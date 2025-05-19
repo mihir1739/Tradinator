@@ -3,53 +3,18 @@
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), running_(false) {
     setupUI();
-    logger_ = new Logger("trade_simulator.log");
-    benchmarker_ = new Benchmarker(logger_);
-    wsClient_ = new WebSocketClient("wss://ws.gomarket-cpp.goquant.io/ws/l2-orderbook/okx/BTC-USDT-SWAP", nullptr);
-    orderBook_ = new OrderBook("okx", "BTC-USDT-SWAP", "SWAP", 1.0, 0.01, 0.001);
-    wsThread_ = new QThread(this);
-
-    // Connect WebSocket signals
-    connect(wsClient_, &WebSocketClient::messageReceived, this, [this](const std::string &message) {
-        benchmarker_->startEndToEnd();
-        if (orderBook_->update(message, benchmarker_)) {
-            emit updateOutputs();
-            emit appendLog("Orderbook updated successfully.");
-        } else {
-            emit appendLog("Failed to update orderbook.");
-        }
-    });
-    connect(wsClient_, &WebSocketClient::errorOccurred, this, [this](const std::string &error) {
-        emit appendLog(QString("WebSocket error: %1").arg(error.c_str()));
-        logger_->logError(error);
-    });
-    connect(wsClient_, &WebSocketClient::connected, this, [this]() {
-        emit appendLog("Connected to WebSocket server.");
-        logger_->logInfo("Connected to WebSocket server.");
-    });
-    connect(wsClient_, &WebSocketClient::disconnected, this, [this]() {
-        emit appendLog("Disconnected from WebSocket server.");
-        logger_->logInfo("Disconnected from WebSocket server.");
-    });
+    logger_ = std::make_unique<Logger>("trade_simulator.log");
+    benchmarker_ = std::make_unique<Benchmarker>(logger_.get());
+    orderBook_ = std::make_unique<OrderBook>("okx", "BTC-USDT-SWAP", "SWAP", 1.0, 0.01, 0.001);
+    ioTimer_ = std::make_unique<QTimer>(this);
 
     // Connect UI update signals
-    connect(this, &MainWindow::appendLog, logDisplay_, &QTextEdit::append);
-    connect(this, &MainWindow::updateOutputs, this, &MainWindow::updateOutputLabels);
-
-    // Move WebSocket to thread
-    wsClient_->moveToThread(wsThread_);
-    wsThread_->start();
+    connect(this, &MainWindow::appendLog, logDisplay_, &QTextEdit::append, Qt::DirectConnection);
+    connect(this, &MainWindow::updateOutputs, this, &MainWindow::updateOutputLabels, Qt::DirectConnection);
 }
 
 MainWindow::~MainWindow() {
     stopWebSocket();
-    delete logger_;
-    delete benchmarker_;
-    delete wsClient_;
-    delete orderBook_;
-    wsThread_->quit();
-    wsThread_->wait();
-    delete wsThread_;
 }
 
 void MainWindow::setupUI() {
@@ -142,8 +107,7 @@ void MainWindow::onStartStopButtonClicked() {
         logger_->logInfo("WebSocket stopped.");
     } else {
         // Update OrderBook with new input parameters
-        delete orderBook_;
-        orderBook_ = new OrderBook(
+        orderBook_ = std::make_unique<OrderBook>(
             exchangeEdit_->text().toStdString(),
             symbolCombo_->currentText().toStdString(),
             orderTypeCombo_->currentText().toStdString(),
@@ -160,19 +124,53 @@ void MainWindow::onStartStopButtonClicked() {
 
 void MainWindow::startWebSocket() {
     running_ = true;
-    QMetaObject::invokeMethod(wsClient_, &WebSocketClient::start, Qt::QueuedConnection);
+    wsClient_ = std::make_unique<WebSocketClient>(
+        "wss://ws.gomarket-cpp.goquant.io/ws/l2-orderbook/okx/" + symbolCombo_->currentText().toStdString(), nullptr);
+    
+    // Connect WebSocket signals
+    connect(wsClient_.get(), &WebSocketClient::messageReceived, this, [this](std::string_view message, Benchmarker*) {
+        benchmarker_->startEndToEnd();
+        if (orderBook_->update(message, benchmarker_.get(), logger_.get())) {
+            emit updateOutputs();
+            emit appendLog("Orderbook updated successfully.");
+        } else {
+            emit appendLog("Failed to update orderbook.");
+        }
+    }, Qt::DirectConnection);
+    connect(wsClient_.get(), &WebSocketClient::errorOccurred, this, [this](const std::string &error) {
+        emit appendLog(QString("WebSocket error: %1").arg(error.c_str()));
+        logger_->logError(error);
+    }, Qt::DirectConnection);
+    connect(wsClient_.get(), &WebSocketClient::connected, this, [this]() {
+        emit appendLog("Connected to WebSocket server.");
+        logger_->logInfo("Connected to WebSocket server.");
+    }, Qt::DirectConnection);
+    connect(wsClient_.get(), &WebSocketClient::disconnected, this, [this]() {
+        emit appendLog("Disconnected from WebSocket server.");
+        logger_->logInfo("Disconnected from WebSocket server.");
+    }, Qt::DirectConnection);
+
+    // Start io_context polling
+    connect(ioTimer_.get(), &QTimer::timeout, this, &MainWindow::processIoContext);
+    ioTimer_->start(5); // Reduced to 5ms for better responsiveness
+    QMetaObject::invokeMethod(wsClient_.get(), &WebSocketClient::start, Qt::QueuedConnection);
 }
 
 void MainWindow::stopWebSocket() {
     running_ = false;
-    QMetaObject::invokeMethod(wsClient_, &WebSocketClient::stop, Qt::QueuedConnection);
+    if (wsClient_) {
+        QMetaObject::invokeMethod(wsClient_.get(), &WebSocketClient::stop, Qt::QueuedConnection);
+        wsClient_.reset();
+    }
+    ioTimer_->stop();
 }
 
 void MainWindow::updateOutputLabels() {
     auto start = std::chrono::high_resolution_clock::now();
+    emit appendLog("Updating UI labels..."); // Debug log
     slippageLabel_->setText(QString("Expected Slippage: %1%").arg(orderBook_->getExpectedSlippage(), 0, 'f', 4));
     feesLabel_->setText(QString("Expected Fees: $%1").arg(orderBook_->getExpectedFees(), 0, 'f', 2));
-    marketImpactLabel_->setText(QString("Market Impact: $%1").arg(orderBook_->getExpectedMarketImpact(), 0, 'f', 2));
+    marketImpactLabel_->setText(QString("Market Impact: $%1").arg(orderBook_->getExpectedMarketImpact(), 0, 'f', 4));
     netCostLabel_->setText(QString("Net Cost: $%1").arg(orderBook_->getNetCost(), 0, 'f', 2));
     makerTakerLabel_->setText(QString("Maker Proportion: %1").arg(orderBook_->getMakerTakerProportion(), 0, 'f', 4));
     latencyLabel_->setText(QString("Latency: %1 μs").arg(orderBook_->getInternalLatency(), 0, 'f', 0));
@@ -180,4 +178,11 @@ void MainWindow::updateOutputLabels() {
     auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     benchmarker_->recordUiUpdateLatency(duration);
     benchmarker_->endEndToEnd();
+}
+
+void MainWindow::processIoContext() {
+    if (wsClient_) {
+        wsClient_->pollIoContext();    // Use public method
+        wsClient_->restartIoContext(); // Use public method
+    }
 }
