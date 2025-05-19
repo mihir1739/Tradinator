@@ -1,0 +1,12 @@
+[requires]
+boost/1.87.0
+rapidjson/1.1.0
+openssl/3.4.1
+eigen/3.4.0
+
+[generators]
+CMakeDeps
+CMakeToolchain
+
+[layout]
+cmake_layout

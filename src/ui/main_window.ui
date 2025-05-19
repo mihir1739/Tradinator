@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>100</x>
+    <y>100</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Trading Simulator</string>
+  </property>
+  <widget class="QWidget" name="centralWidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <widget class="QGroupBox" name="marketDataGroup">
+      <property name="title">
+       <string>Market Data</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QLabel" name="marketDataLabel">
+         <property name="text">
+          <string>Real-time Market Data:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="marketDataTextEdit"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QGroupBox" name="simulationGroup">
+      <property name="title">
+       <string>Simulation Results</string>
+      </property>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QLabel" name="simulationResultsLabel">
+         <property name="text">
+          <string>Simulation Results:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="simulationResultsTextEdit"/>
+       </item>
+      </layout>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="startSimulationButton">
+      <property name="text">
+       <string>Start Simulation</string>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
+  <statusbar name="statusbar"/>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
