@@ -28,6 +28,7 @@ qt_standard_project_setup()
 
 # Source files
 set(SOURCES
+    src/benchmarking/benchmarker.cpp
     src/core/models/orderbook.cpp
     src/core/web/websocket.cpp
     src/utils/logger.cpp
@@ -37,6 +38,7 @@ set(SOURCES
 
 # Header files (for IDEs and clarity)
 set(HEADERS
+    src/benchmarking/benchmarker.hpp
     src/core/models/orderbook.hpp
     src/core/web/websocket.hpp
     src/utils/logger.hpp

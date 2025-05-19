@@ -16,6 +16,7 @@
 #include "core/web/websocket.hpp"
 #include "core/models/orderbook.hpp"
 #include "utils/logger.hpp"
+#include "benchmarking/benchmarker.hpp"
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -61,6 +62,7 @@ private:
     WebSocketClient *wsClient_;
     OrderBook *orderBook_;
     QThread *wsThread_;
+    Benchmarker *benchmarker_;
     std::atomic<bool> running_;
 };
 

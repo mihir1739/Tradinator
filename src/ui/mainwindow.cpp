@@ -1,15 +1,18 @@
 #include "mainwindow.hpp"
+#include <chrono>
 
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), running_(false) {
     setupUI();
     logger_ = new Logger("trade_simulator.log");
+    benchmarker_ = new Benchmarker(logger_);
     wsClient_ = new WebSocketClient("wss://ws.gomarket-cpp.goquant.io/ws/l2-orderbook/okx/BTC-USDT-SWAP", nullptr);
     orderBook_ = new OrderBook("okx", "BTC-USDT-SWAP", "SWAP", 1.0, 0.01, 0.001);
     wsThread_ = new QThread(this);
 
     // Connect WebSocket signals
     connect(wsClient_, &WebSocketClient::messageReceived, this, [this](const std::string &message) {
-        if (orderBook_->update(message)) {
+        benchmarker_->startEndToEnd();
+        if (orderBook_->update(message, benchmarker_)) {
             emit updateOutputs();
             emit appendLog("Orderbook updated successfully.");
         } else {
@@ -41,6 +44,7 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), running_(false) {
 MainWindow::~MainWindow() {
     stopWebSocket();
     delete logger_;
+    delete benchmarker_;
     delete wsClient_;
     delete orderBook_;
     wsThread_->quit();
@@ -165,10 +169,15 @@ void MainWindow::stopWebSocket() {
 }
 
 void MainWindow::updateOutputLabels() {
+    auto start = std::chrono::high_resolution_clock::now();
     slippageLabel_->setText(QString("Expected Slippage: %1%").arg(orderBook_->getExpectedSlippage(), 0, 'f', 4));
     feesLabel_->setText(QString("Expected Fees: $%1").arg(orderBook_->getExpectedFees(), 0, 'f', 2));
     marketImpactLabel_->setText(QString("Market Impact: $%1").arg(orderBook_->getExpectedMarketImpact(), 0, 'f', 2));
     netCostLabel_->setText(QString("Net Cost: $%1").arg(orderBook_->getNetCost(), 0, 'f', 2));
     makerTakerLabel_->setText(QString("Maker Proportion: %1").arg(orderBook_->getMakerTakerProportion(), 0, 'f', 4));
     latencyLabel_->setText(QString("Latency: %1 μs").arg(orderBook_->getInternalLatency(), 0, 'f', 0));
+    auto end = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    benchmarker_->recordUiUpdateLatency(duration);
+    benchmarker_->endEndToEnd();
 }

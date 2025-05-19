@@ -20,6 +20,8 @@ namespace net = boost::asio;
 namespace ssl = boost::asio::ssl;
 using tcp = boost::asio::ip::tcp;
 
+class Benchmarker; // Forward declaration
+
 class WebSocketClient : public QObject {
     Q_OBJECT
 
@@ -33,7 +35,7 @@ public slots:
     void receive();
 
 signals:
-    void messageReceived(const std::string& message);
+    void messageReceived(const std::string& message, Benchmarker* benchmarker);
     void errorOccurred(const std::string& error);
     void connected();
     void disconnected();

@@ -33,13 +33,6 @@ WebSocketClient::~WebSocketClient() {
 
 void WebSocketClient::start() {
     if (connect()) {
-        // // Subscribe to OKX order book channel
-        // std::string subscription = R"({"op":"subscribe","args":[{"channel":"books","instId":"BTC-USDT-SWAP"}]})";
-        // if (secure_) {
-        //     wss_.write(net::buffer(subscription));
-        // } else {
-        //     ws_.write(net::buffer(subscription));
-        // }
         emit connected();
         receive();
     } else {
@@ -81,11 +74,11 @@ void WebSocketClient::receive() {
         if (secure_) {
             wss_.read(buffer_);
             std::string message = beast::buffers_to_string(buffer_.data());
-            emit messageReceived(message);
+            emit messageReceived(message, nullptr);
         } else {
             ws_.read(buffer_);
             std::string message = beast::buffers_to_string(buffer_.data());
-            emit messageReceived(message);
+            emit messageReceived(message, nullptr);
         }
         if (!io_context_.stopped()) {
             receive(); // Continue receiving messages
