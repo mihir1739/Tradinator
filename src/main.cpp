@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
     // Command-line mode
     Logger logger("trade_simulator.log");
     logger.logInfo("Initializing trade simulator...");
-    WebSocketClient wsClient("wss://ws.gomarket-cpp.goquant.io/ws/l2-orderbook/okx/BTC-USDT-SWAP"); // Replace with actual WebSocket endpoint
+    WebSocketClient wsClient("wss://ws.gomarket-cpp.goquant.io/ws/l2-orderbook/okx/BTC-USDT-SWAP"); 
     OrderBook orderBook(EXCHANGE, SYMBOL, ORDER_TYPE, QUANTITY, VOLATILITY, FEE_RATE);
     std::atomic<bool> running{true};
 
@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
                 // Display orderbook summary
                 logger.logInfo(orderBook.getOrderBookSummary());
 
-                // You can also access specific data points
+                
                 PriceLevel bestBid = orderBook.getBestBid();
                 PriceLevel bestAsk = orderBook.getBestAsk();
 
