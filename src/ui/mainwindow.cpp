@@ -1,6 +1,14 @@
 #include "mainwindow.hpp"
 #include <chrono>
 
+/**
+ * @brief Constructs the main window and initializes all components
+ * 
+ * Creates the UI components, initializes the logger, benchmarker, order book,
+ * and sets up the timer for IO operations. Also connects UI signals.
+ * 
+ * @param parent The parent widget
+ */
 MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), running_(false) {
     setupUI();
     logger_ = std::make_unique<Logger>("trade_simulator.log");
@@ -13,10 +21,19 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent), running_(false) {
     connect(this, &MainWindow::updateOutputs, this, &MainWindow::updateOutputLabels, Qt::DirectConnection);
 }
 
+/**
+ * @brief Destroys the main window and stops any active WebSocket connections
+ */
 MainWindow::~MainWindow() {
     stopWebSocket();
 }
 
+/**
+ * @brief Sets up the user interface for the main window
+ * 
+ * Creates all UI elements including the split panels, input parameters section,
+ * output parameters section, and log display. Also initializes default values.
+ */
 void MainWindow::setupUI() {
     QWidget *centralWidget = new QWidget(this);
     setCentralWidget(centralWidget);
@@ -58,12 +75,11 @@ void MainWindow::setupUI() {
     volatilitySpin_->setSingleStep(0.001);
     leftLayout->addWidget(volatilitySpin_);
 
-    leftLayout->addWidget(new QLabel("Fee Rate:", leftPanel_));
-    feeRateSpin_ = new QDoubleSpinBox(leftPanel_);
-    feeRateSpin_->setRange(0.0, 0.01);
-    feeRateSpin_->setValue(0.001);
-    feeRateSpin_->setSingleStep(0.0001);
-    leftLayout->addWidget(feeRateSpin_);
+    leftLayout->addWidget(new QLabel("Fee Tier:", leftPanel_));
+    feeTierCombo_ = new QComboBox(leftPanel_);
+    feeTierCombo_->addItems({"Tier 1 (0.18%)", "Tier 2 (0.165%)", "Tier 3 (0.15%)", "Tier 4 (0.135%)", "Tier 5 (0.12%)"});
+    leftLayout->addWidget(feeTierCombo_);
+
 
     startStopButton_ = new QPushButton("Start", leftPanel_);
     connect(startStopButton_, &QPushButton::clicked, this, &MainWindow::onStartStopButtonClicked);
@@ -99,6 +115,12 @@ void MainWindow::setupUI() {
     resize(800, 600);
 }
 
+/**
+ * @brief Handles the start/stop button click event
+ * 
+ * If the application is running, stops the WebSocket connection.
+ * If not running, creates a new OrderBook with updated parameters and starts the WebSocket.
+ */
 void MainWindow::onStartStopButtonClicked() {
     if (running_) {
         stopWebSocket();
@@ -107,13 +129,15 @@ void MainWindow::onStartStopButtonClicked() {
         logger_->logInfo("WebSocket stopped.");
     } else {
         // Update OrderBook with new input parameters
+        int selectedTier = feeTierCombo_->currentIndex() + 1; // 1-based index
+        double feeRate = getFeeRateForTier(selectedTier);
         orderBook_ = std::make_unique<OrderBook>(
             exchangeEdit_->text().toStdString(),
             symbolCombo_->currentText().toStdString(),
             orderTypeCombo_->currentText().toStdString(),
             quantitySpin_->value(),
             volatilitySpin_->value(),
-            feeRateSpin_->value()
+            feeRate
         );
         startWebSocket();
         startStopButton_->setText("Stop");
@@ -122,6 +146,12 @@ void MainWindow::onStartStopButtonClicked() {
     }
 }
 
+/**
+ * @brief Starts the WebSocket connection and sets up event handlers
+ * 
+ * Initializes the WebSocket client, connects signal handlers for various WebSocket events,
+ * and starts the IO timer for processing WebSocket messages.
+ */
 void MainWindow::startWebSocket() {
     running_ = true;
     wsClient_ = std::make_unique<WebSocketClient>(
@@ -156,6 +186,11 @@ void MainWindow::startWebSocket() {
     QMetaObject::invokeMethod(wsClient_.get(), &WebSocketClient::start, Qt::QueuedConnection);
 }
 
+/**
+ * @brief Stops the WebSocket connection and cleans up resources
+ * 
+ * Stops the WebSocket client, stops the IO timer, and resets the WebSocket client pointer.
+ */
 void MainWindow::stopWebSocket() {
     running_ = false;
     if (wsClient_) {
@@ -165,6 +200,12 @@ void MainWindow::stopWebSocket() {
     ioTimer_->stop();
 }
 
+/**
+ * @brief Updates the UI output labels with the latest data from the order book
+ * 
+ * Updates all the displayed output values and measures the UI update latency.
+ * The benchmark timers for both UI update and end-to-end performance are used.
+ */
 void MainWindow::updateOutputLabels() {
     auto start = std::chrono::high_resolution_clock::now();
     emit appendLog("Updating UI labels..."); // Debug log
@@ -180,9 +221,35 @@ void MainWindow::updateOutputLabels() {
     benchmarker_->endEndToEnd();
 }
 
+/**
+ * @brief Processes events from the WebSocket IO context
+ * 
+ * Called periodically by the IO timer to process any pending WebSocket
+ * messages and maintain the WebSocket connection.
+ */
 void MainWindow::processIoContext() {
     if (wsClient_) {
         wsClient_->pollIoContext();    // Use public method
         wsClient_->restartIoContext(); // Use public method
+    }
+}
+
+/**
+ * @brief Converts a fee tier level to the corresponding fee rate
+ * 
+ * Maps the tier level (1-5) to the actual fee percentage used in calculations.
+ * Higher tiers have lower fee rates.
+ * 
+ * @param tier The fee tier level (1 to 5)
+ * @return The corresponding fee rate as a decimal (e.g., 0.0018 for 0.18%)
+ */
+double MainWindow::getFeeRateForTier(int tier) {
+    switch(tier) {
+        case 1: return 0.0018;
+        case 2: return 0.00165;
+        case 3: return 0.0015;
+        case 4: return 0.00135;
+        case 5: return 0.0012;
+        default: return 0.0018;
     }
 }

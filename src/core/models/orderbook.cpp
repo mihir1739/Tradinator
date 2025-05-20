@@ -4,6 +4,18 @@
 #include <rapidjson/writer.h>
 #include <cmath>
 
+/**
+ * @brief Constructs the OrderBook object with the given parameters
+ * 
+ * Initializes all member variables and reserves space for historical data.
+ * 
+ * @param exchange The name of the exchange
+ * @param symbol The trading pair symbol
+ * @param order_type The type of order (e.g., limit, market)
+ * @param quantity The quantity of the asset to trade
+ * @param volatility The expected volatility of the asset
+ * @param fee_rate The trading fee rate
+ */
 OrderBook::OrderBook(const std::string& exchange, const std::string& symbol, const std::string& order_type,
                      double quantity, double volatility, double fee_rate)
     : exchange_(exchange), symbol_(symbol), order_type_(order_type),
@@ -19,8 +31,24 @@ OrderBook::OrderBook(const std::string& exchange, const std::string& symbol, con
     }
 }
 
+/**
+ * @brief Destructor for the OrderBook class
+ * 
+ * Cleans up any resources used by the OrderBook object.
+ */
 OrderBook::~OrderBook() {}
 
+/**
+ * @brief Updates the order book with a new message
+ * 
+ * Parses the JSON message and updates the bids and asks. Computes expected slippage,
+ * fees, market impact, and net cost based on the updated order book.
+ * 
+ * @param message The JSON message containing the order book data
+ * @param benchmarker Pointer to a Benchmarker object for performance measurement
+ * @param logger Pointer to a Logger object for logging messages
+ * @return true if the update was successful, false otherwise
+ */
 bool OrderBook::update(std::string_view message, Benchmarker* benchmarker, Logger* logger) {
     auto start = std::chrono::high_resolution_clock::now();
     std::lock_guard<std::mutex> lock(mutex_);
@@ -178,6 +206,12 @@ bool OrderBook::update(std::string_view message, Benchmarker* benchmarker, Logge
     return true;
 }
 
+/**
+ * @brief Computes linear regression coefficients based on historical data
+ * 
+ * Uses the historical data to compute the regression coefficients for slippage
+ * prediction based on mid-price.
+ */
 void OrderBook::computeRegression() {
     Eigen::MatrixXd X(historical_data_.size(), 2);
     Eigen::VectorXd y(historical_data_.size());
@@ -195,15 +229,23 @@ void OrderBook::computeRegression() {
         y.conservativeResize(valid_count);
         regression_coefficients_ = (X.transpose() * X).ldlt().solve(X.transpose() * y);
     }
-    if (valid_count >= 10) {
-        std::cout << "Linear Regression - Valid points: " << valid_count
-                  << ", Intercept: " << regression_coefficients_(0)
-                  << ", Slope: " << regression_coefficients_(1) << std::endl;
-    } else {
-        std::cout << "Linear Regression - Not enough valid points: " << valid_count << std::endl;
-    }
+    // if (valid_count >= 10) {
+    //     std::cout << "Linear Regression - Valid points: " << valid_count
+    //               << ", Intercept: " << regression_coefficients_(0)
+    //               << ", Slope: " << regression_coefficients_(1) << std::endl;
+    // } else {
+    //     std::cout << "Linear Regression - Not enough valid points: " << valid_count << std::endl;
+    // }
 }
 
+/**
+ * @brief Computes quantile regression coefficients based on historical data
+ * 
+ * Uses the historical data to compute the quantile regression coefficients for slippage
+ * prediction based on mid-price.
+ * 
+ * @param quantile The quantile level (default is 0.5 for median regression)
+ */
 void OrderBook::computeQuantileRegression(double quantile) {
     Eigen::MatrixXd X(historical_data_.size(), 2);
     Eigen::VectorXd y(historical_data_.size());
@@ -242,12 +284,18 @@ void OrderBook::computeQuantileRegression(double quantile) {
             break;
         }
     }
-    regression_coefficients_ = beta;
-    std::cout << "Quantile Regression (tau=" << quantile << ") - Valid points: " << valid_count
-              << ", Intercept: " << regression_coefficients_(0)
-              << ", Slope: " << regression_coefficients_(1) << std::endl;
+    // regression_coefficients_ = beta;
+    // std::cout << "Quantile Regression (tau=" << quantile << ") - Valid points: " << valid_count
+    //           << ", Intercept: " << regression_coefficients_(0)
+    //           << ", Slope: " << regression_coefficients_(1) << std::endl;
 }
 
+/**
+ * @brief Getters for various metrics
+ * 
+ * These methods return the computed values for slippage, fees, market impact,
+ * net cost, maker-taker proportion, and internal latency.
+ */
 double OrderBook::getExpectedSlippage() const { return expected_slippage_; }
 double OrderBook::getExpectedFees() const { return expected_fees_; }
 double OrderBook::getExpectedMarketImpact() const { return expected_market_impact_; }

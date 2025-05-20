@@ -66,7 +66,7 @@ def analyze_latency(log_file_path, output_path):
     }
     
     # Write results to output file
-    with open(output_path, 'a') as file:
+    with open(output_path, 'w') as file:
         file.write("TRADINATOR PERFORMANCE BENCHMARK SUMMARY\n")
         file.write("======================================\n\n")
         

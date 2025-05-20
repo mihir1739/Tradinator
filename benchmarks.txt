@@ -2,30 +2,30 @@ TRADINATOR PERFORMANCE BENCHMARK SUMMARY
 ======================================
 
 Data Processing Latency Statistics:
-  Average: 20.61 μs
-  Median: 16.00 μs
-  Minimum: 5 μs
-  Maximum: 62 μs
-  Standard Deviation: 12.19 μs
-  Sample Count: 382
+  Average: 417.63 μs
+  Median: 321.50 μs
+  Minimum: 136 μs
+  Maximum: 1503 μs
+  Standard Deviation: 208.44 μs
+  Sample Count: 188
 
 UI Update Latency Statistics:
-  Average: 16.26 μs
-  Median: 14.00 μs
-  Minimum: 5 μs
-  Maximum: 131 μs
-  Standard Deviation: 9.37 μs
-  Sample Count: 382
+  Average: 357.40 μs
+  Median: 319.00 μs
+  Minimum: 154 μs
+  Maximum: 1082 μs
+  Standard Deviation: 131.88 μs
+  Sample Count: 188
 
 End-to-End Simulation Loop Latency Statistics:
-  Average: 158.80 μs
-  Median: 145.50 μs
-  Minimum: 46 μs
-  Maximum: 445 μs
-  Standard Deviation: 64.94 μs
-  Sample Count: 382
+  Average: 841.79 μs
+  Median: 719.50 μs
+  Minimum: 312 μs
+  Maximum: 1833 μs
+  Standard Deviation: 294.63 μs
+  Sample Count: 188
 
 Performance Insights:
-  System Overhead: 121.93 μs
-  Data Processing / Total Time: 12.98%
-  UI Update / Total Time: 10.24%
+  System Overhead: 66.76 μs
+  Data Processing / Total Time: 49.61%
+  UI Update / Total Time: 42.46%

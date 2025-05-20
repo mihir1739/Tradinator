@@ -1,10 +1,24 @@
 #include "websocket.hpp"
 #include <regex>
 
+/**
+ * @brief Fails the WebSocket connection with an error message
+ * 
+ * @param ec The error code
+ * @param what The error message
+ */
 void fail(beast::error_code ec, char const* what) {
     std::cerr << what << ": " << ec.message() << "\n";
 }
 
+/**
+ * @brief WebSocketClient constructor
+ * 
+ * Parses the URL and initializes the WebSocket client.
+ * 
+ * @param url The WebSocket URL
+ * @param parent The parent QObject
+ */
 WebSocketClient::WebSocketClient(const std::string& url, QObject *parent) 
     : QObject(parent), resolver_(io_context_), wss_(nullptr), ws_(nullptr) {
     std::regex url_regex("(wss?)://([^:/]+)(?::([0-9]+))?(/.*)?");
@@ -30,18 +44,38 @@ WebSocketClient::WebSocketClient(const std::string& url, QObject *parent)
     }
 }
 
+/**
+ * @brief WebSocketClient destructor
+ * 
+ * Cleans up the WebSocket client.
+ */
 WebSocketClient::~WebSocketClient() {
     stop();
 }
 
+/**
+ * @brief Polls the io_context
+ * 
+ * This method is used to poll the io_context for any pending operations.
+ */
 void WebSocketClient::pollIoContext() {
     io_context_.poll_one();
 }
 
+/**
+ * @brief Restarts the io_context
+ * 
+ * This method is used to restart the io_context.
+ */
 void WebSocketClient::restartIoContext() {
     io_context_.restart();
 }
 
+/**
+ * @brief Starts the WebSocket client
+ * 
+ * This method initiates the WebSocket connection and sets up the necessary options.
+ */
 void WebSocketClient::start() {
     if (connect()) {
         // Enable compression
@@ -52,7 +86,7 @@ void WebSocketClient::start() {
                 }));
             wss_->control_callback(
                 [](websocket::frame_type kind, beast::string_view) {
-                    // Handle ping/pong for keep-alive
+                    // TODO : Handle ping/pong for keep-alive
                 });
         } else {
             ws_->set_option(websocket::stream_base::decorator(
@@ -71,11 +105,23 @@ void WebSocketClient::start() {
     }
 }
 
+/**
+ * @brief Stops the WebSocket client
+ * 
+ * This method disconnects the WebSocket client and emits the disconnected signal.
+ */
 void WebSocketClient::stop() {
     disconnect();
     emit disconnected();
 }
 
+/**
+ * @brief Connects to the WebSocket server
+ * 
+ * This method establishes a connection to the WebSocket server.
+ * 
+ * @return true if the connection was successful, false otherwise
+ */
 bool WebSocketClient::connect() {
     try {
         auto results = resolver_.resolve(host_, port_);
@@ -100,6 +146,11 @@ bool WebSocketClient::connect() {
     }
 }
 
+/**
+ * @brief Receives messages from the WebSocket server
+ * 
+ * This method reads messages from the WebSocket server and emits the messageReceived signal.
+ */
 void WebSocketClient::receive() {
     try {
         buffer_.clear();
@@ -122,6 +173,11 @@ void WebSocketClient::receive() {
     }
 }
 
+/**
+ * @brief Asynchronously receives messages from the WebSocket server
+ * 
+ * This method sets up an asynchronous read operation for messages from the WebSocket server.
+ */
 void WebSocketClient::asyncReceive() {
     buffer_.clear();
     if (secure_) {
@@ -149,6 +205,11 @@ void WebSocketClient::asyncReceive() {
     }
 }
 
+/**
+ * @brief Disconnects from the WebSocket server
+ * 
+ * This method closes the WebSocket connection and stops the io_context.
+ */
 void WebSocketClient::disconnect() {
     try {
         if (secure_ && wss_) {

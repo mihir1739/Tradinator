@@ -39,6 +39,7 @@ private:
     void setupUI();
     void startWebSocket();
     void stopWebSocket();
+    double getFeeRateForTier(int tier);
 
     // UI Components
     QSplitter *splitter_;
@@ -49,7 +50,7 @@ private:
     QComboBox *orderTypeCombo_;
     QDoubleSpinBox *quantitySpin_;
     QDoubleSpinBox *volatilitySpin_;
-    QDoubleSpinBox *feeRateSpin_;
+    QComboBox *feeTierCombo_;
     QPushButton *startStopButton_;
     QTextEdit *logDisplay_;
     QLabel *slippageLabel_;
