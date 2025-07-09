@@ -1,6 +1,5 @@
 #include "mainwindow.hpp"
 #include <chrono>
-
 /**
  * @brief Constructs the main window and initializes all components
  * 
@@ -153,10 +152,19 @@ void MainWindow::onStartStopButtonClicked() {
  * and starts the IO timer for processing WebSocket messages.
  */
 void MainWindow::startWebSocket() {
+    auto pre = env::prefix("TRADINATOR");
+    auto swap_api_id = pre.register_required_variable<std::string>("SWAP_API");
+    const auto parsed_and_validated_pre = pre.parse_and_validate();
+    const std::string swap_api = (parsed_and_validated_pre.ok()) ? parsed_and_validated_pre.get(swap_api_id) : "";
+    if (swap_api.empty()) {
+        emit appendLog("SWAP-API environment variable is not set.");
+        logger_->logError("SWAP-API environment variable is not set.");
+        return;
+    }
     running_ = true;
     wsClient_ = std::make_unique<WebSocketClient>(
-        "wss://ws.gomarket-cpp.goquant.io/ws/l2-orderbook/okx/" + symbolCombo_->currentText().toStdString(), nullptr);
-    
+        swap_api + symbolCombo_->currentText().toStdString(), nullptr);
+
     // Connect WebSocket signals
     connect(wsClient_.get(), &WebSocketClient::messageReceived, this, [this](std::string_view message, Benchmarker*) {
         benchmarker_->startEndToEnd();

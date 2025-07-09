@@ -15,6 +15,7 @@ find_package(Boost REQUIRED COMPONENTS system thread)
 find_package(OpenSSL REQUIRED)
 find_package(RapidJSON CONFIG REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(libenvpp REQUIRED)
 
 # Include directories
 include_directories(${CMAKE_SOURCE_DIR}/src)
@@ -60,6 +61,7 @@ target_link_libraries(Tradinator PRIVATE
     OpenSSL::SSL
     OpenSSL::Crypto
     Eigen3::Eigen
+    libenvpp::libenvpp
 )
 
 # RapidJSON is header-only, ensure include path is set

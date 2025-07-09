@@ -18,6 +18,7 @@
 #include "core/models/orderbook.hpp"
 #include "utils/logger.hpp"
 #include "benchmarking/benchmarker.hpp"
+#include <libenvpp/env.hpp>
 
 class MainWindow : public QMainWindow {
     Q_OBJECT

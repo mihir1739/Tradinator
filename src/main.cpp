@@ -12,6 +12,7 @@
 // #include <atomic>
 #include <QApplication>
 #include "ui/mainwindow.hpp"
+#include <libenvpp/env.hpp>
 
 #ifdef _PRESET_CONSTANTS_
 #define EXCHANGE "okx"         // Replace with actual exchange name
@@ -33,7 +34,18 @@ int main(int argc, char *argv[]) {
     // Command-line mode
     Logger logger("trade_simulator.log");
     logger.logInfo("Initializing trade simulator...");
-    WebSocketClient wsClient("wss://ws.gomarket-cpp.goquant.io/ws/l2-orderbook/okx/BTC-USDT-SWAP"); 
+
+    auto pre = env::prefix("TRADINATOR");
+    auto swap_api_id = pre.register_required_variable<std::string>("SWAP_API");
+    const auto parsed_and_validated_pre = pre.parse_and_validate();
+    const std::string swap_api = (parsed_and_validated_pre.ok()) ? parsed_and_validated_pre.get(swap_api_id) : "";
+    if (swap_api.empty()) {
+        emit appendLog("SWAP-API environment variable is not set.");
+        logger_->logError("SWAP-API environment variable is not set.");
+        return;
+    }
+
+    WebSocketClient wsClient(swap_api + "/ws/l2-orderbook/okx/BTC-USDT-SWAP");
     OrderBook orderBook(EXCHANGE, SYMBOL, ORDER_TYPE, QUANTITY, VOLATILITY, FEE_RATE);
     std::atomic<bool> running{true};
 
